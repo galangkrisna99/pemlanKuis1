@@ -1,136 +1,131 @@
 import java.util.*;
-
-abstract class Vehicle {
-protected String kode;
+abstract class Student {
     protected String nama;
-    protected int hargaSewa;
-    protected boolean tersedia;
+    protected int saldo;
     protected String tipe;
 
-    public Vehicle(String kode, String nama, int hargaSewa) {
-        this.kode = kode;
+    public Student(String nama) {
         this.nama = nama;
-        this.hargaSewa = hargaSewa;
-        this.tersedia = true;
+        this.saldo = 0;
     }
 
-    public abstract int hitungSewa(int hari, boolean pakaiPromo);
+    public String getNama() {
+        return nama;
+    }
 
-    public String getStatusString() {
-        return tersedia ? "TERSEDIA" : "DISEWA";
+    public int getSaldo() {
+        return saldo;
+    }
+
+    public void save(int jumlah) {
+        this.saldo += jumlah;
+    }
+
+    public abstract boolean take(int jumlah);
+
+    public String getTipe() {
+        return tipe;
     }
 }
-class Car extends Vehicle {
-    public Car(String kode, String nama, int hargaSewa) {
-        super(kode, nama, hargaSewa);
-        this.tipe = "CAR";
+
+class Reguler extends Student {
+    public Reguler(String nama) {
+        super(nama);
+        this.tipe = "REGULER";
     }
 
     @Override
-    public int hitungSewa(int hari, boolean pakaiPromo) {
-        int total = this.hargaSewa * hari;
-        if (pakaiPromo) {
-            total -= 20000;
+    public boolean take(int jumlah) {
+        if (this.saldo >= jumlah) {
+            this.saldo -= jumlah;
+            return true;
         }
-        return Math.max(0, total); // Total minimum adalah 0
+        return false;
     }
 }
 
-class Bike extends Vehicle {
-    public Bike(String kode, String nama, int hargaSewa) {
-        super(kode, nama, hargaSewa);
-        this.tipe = "BIKE";
+class Beasiswa extends Student {
+    public Beasiswa(String nama) {
+        super(nama);
+        this.tipe = "BEASISWA";
     }
 
     @Override
-    public int hitungSewa(int hari, boolean pakaiPromo) {
-        int total = this.hargaSewa * hari;
-        if (pakaiPromo) {
-            total -= 10000;
+    public boolean take(int jumlah) {
+        if (this.saldo >= jumlah) {
+            // Beasiswa dapat potongan 1000
+            this.saldo -= (jumlah - 1000);
+            return true;
         }
-        return Math.max(0, total);
+        return false;
     }
 }
+
 public class Main {
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
-        Map<String, Vehicle> daftarKendaraan = new LinkedHashMap<>();
+        Map<String, Student> daftarSiswa = new LinkedHashMap<>();
 
         if (!sc.hasNextInt()) return;
         int n = sc.nextInt();
-        sc.nextLine();
+        sc.nextLine(); // consume newline
 
         for (int i = 0; i < n; i++) {
-            String input = sc.nextLine();
-            String[] p = input.split(" ");
-            String command = p[0];
+            String line = sc.nextLine();
+            String[] parts = line.split(" ");
+            String command = parts[0];
 
             switch (command) {
-                case "ADD":
-                    String tipe = p[1];
-                    String kodeAdd = p[2];
-                    String namaAdd = p[3];
-                    int hargaAdd = Integer.parseInt(p[4]);
-
-                    if (daftarKendaraan.containsKey(kodeAdd)) {
-                        System.out.println("Kendaraan sudah terdaftar");
+                case "CREATE":
+                    String tipe = parts[1];
+                    String namaBaru = parts[2];
+                    if (daftarSiswa.containsKey(namaBaru)) {
+                        System.out.println("Akun sudah terdaftar");
                     } else {
-                        Vehicle v = tipe.equals("CAR") ? new Car(kodeAdd, namaAdd, hargaAdd) : new Bike(kodeAdd, namaAdd, hargaAdd);
-                        daftarKendaraan.put(kodeAdd, v);
-                        System.out.println(tipe + " " + kodeAdd + " berhasil ditambahkan");
+                        Student s = tipe.equals("REGULER") ? new Reguler(namaBaru) : new Beasiswa(namaBaru);
+                        daftarSiswa.put(namaBaru, s);
+                        System.out.println(tipe + " " + namaBaru + " berhasil dibuat");
                     }
                     break;
 
-                case "RENT":
-                    String kodeRent = p[1];
-                    int hari = Integer.parseInt(p[2]);
-                    boolean promo = (p.length == 4 && p[3].equals("PROMO"));
-
-                    if (!daftarKendaraan.containsKey(kodeRent)) {
-                        System.out.println("Kendaraan tidak ditemukan");
+                case "SAVE":
+                    String namaSimpan = parts[1];
+                    int jmlSimpan = Integer.parseInt(parts[2]);
+                    if (daftarSiswa.containsKey(namaSimpan)) {
+                        Student s = daftarSiswa.get(namaSimpan);
+                        s.save(jmlSimpan);
+                        System.out.println("Saldo " + namaSimpan + ": " + s.getSaldo());
                     } else {
-                        Vehicle v = daftarKendaraan.get(kodeRent);
-                        if (!v.tersedia) {
-                            System.out.println("Kendaraan sedang disewa");
+                        System.out.println("Akun tidak ditemukan");
+                    }
+                    break;
+
+                case "TAKE":
+                    String namaTarik = parts[1];
+                    int jmlTarik = Integer.parseInt(parts[2]);
+                    if (daftarSiswa.containsKey(namaTarik)) {
+                        Student s = daftarSiswa.get(namaTarik);
+                        if (s.take(jmlTarik)) {
+                            System.out.println("Saldo " + namaTarik + ": " + s.getSaldo());
                         } else {
-                            int total = v.hitungSewa(hari, promo);
-                            v.tersedia = false;
-                            System.out.println("Total sewa " + kodeRent + ": " + total);
+                            System.out.println("Saldo " + namaTarik + " tidak cukup");
                         }
-                    }
-                    break;
-
-                case "RETURN":
-                    String kodeReturn = p[1];
-                    if (!daftarKendaraan.containsKey(kodeReturn)) {
-                        System.out.println("Kendaraan tidak ditemukan");
                     } else {
-                        Vehicle v = daftarKendaraan.get(kodeReturn);
-                        if (v.tersedia) {
-                            System.out.println("Kendaraan belum disewa");
-                        } else {
-                            v.tersedia = true;
-                            System.out.println(kodeReturn + " berhasil dikembalikan");
-                        }
+                        System.out.println("Akun tidak ditemukan");
                     }
                     break;
 
-                case "DETAIL":
-                    String kodeDetail = p[1];
-                    if (!daftarKendaraan.containsKey(kodeDetail)) {
-                        System.out.println("Kendaraan tidak ditemukan");
+                case "CHECK":
+                    String namaCek = parts[1];
+                    if (daftarSiswa.containsKey(namaCek)) {
+                        Student s = daftarSiswa.get(namaCek);
+                        System.out.println(s.getNama() + " | " + s.getTipe() + " | saldo: " + s.getSaldo());
                     } else {
-                        Vehicle v = daftarKendaraan.get(kodeDetail);
-                        System.out.println(v.kode + " | " + v.tipe + " | " + v.nama + " | harga: " + v.hargaSewa + " | status: " + v.getStatusString());
+                        System.out.println("Akun tidak ditemukan");
                     }
-                    break;
-
-                case "COUNT":
-                    System.out.println("Total kendaraan: " + daftarKendaraan.size());
                     break;
             }
         }
         sc.close();
     }
 }
-    
